@@ -51,7 +51,7 @@ div {
     font-weight: bold;
 }
 
-#playerNameInput {
+#nomeJogadorInput {
     width: 100%;
     text-align: center;
     padding: 10px;
@@ -65,7 +65,7 @@ div {
     outline: none;
 }
 
-#playerNameInput:focus, #playerNameInput.focus {
+#nomeJogadorInput:focus, #nomeJogadorInput.focus {
     border: solid 1px #CCCCCC;
     box-shadow: 0 0 3px 1px #DDDDDD;
 }
