@@ -4,34 +4,35 @@
 
 var cfg = require('../../../config.json');
 
-// determine mass from radius of circle
-exports.massToRadius = function (mass) {
-    return 4 + Math.sqrt(mass) * 6;
+// Determina o raio do circulo de acordo com a massa
+exports.calculaRaio = function (massa) {
+    return 4 + Math.sqrt(massa) * 6;
 };
 
 
-// overwrite Math.log function
-exports.log = (function () {
+// Calcula a divisao do logaritmo por outro logaritmo
+exports.dividirLog = (function () {
     var log = Math.log;
     return function (n, base) {
         return log(n) / (base ? log(base) : 1);
     };
 })();
 
-// get the Euclidean distance between the edges of two shapes
-exports.getDistance = function (p1, p2) {
+// calcula a distancia entre dois pontos
+exports.calcularDistancia = function (p1, p2) {
     return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2)) - p1.radius - p2.radius;
 };
 
-exports.randomInRange = function (from, to) {
-    return Math.floor(Math.random() * (to - from)) + from;
+// Gera um numero aleatorio dentro de um perimetro
+exports.gerarNumeroAleatorio = function (maior, menor) {
+    return Math.floor(Math.random() * (menor - maior)) + maior;
 };
 
-// generate a random position within the field of play
-exports.randomPosition = function (radius) {
+// Gera um ponto aleatorio dentro da area do jogo
+exports.gerarPontoAleatoria = function (raio) {
     return {
-        x: exports.randomInRange(radius, cfg.larguraJogo - radius),
-        y: exports.randomInRange(radius, cfg.alturaJogo - radius)
+        x: exports.gerarNumeroAleatorio(raio, cfg.larguraJogo - raio),
+        y: exports.gerarNumeroAleatorio(raio, cfg.alturaJogo - raio)
     };
 };
 
@@ -40,17 +41,17 @@ exports.uniformPosition = function(points, radius) {
     var numberOfCandidates = 10;
 
     if (points.length === 0) {
-        return exports.randomPosition(radius);
+        return exports.gerarPontoAleatoria(radius);
     }
 
     // Generate the candidates
     for (var ci = 0; ci < numberOfCandidates; ci++) {
         var minDistance = Infinity;
-        var candidate = exports.randomPosition(radius);
+        var candidate = exports.gerarPontoAleatoria(radius);
         candidate.radius = radius;
 
         for (var pi = 0; pi < points.length; pi++) {
-            var distance = exports.getDistance(candidate, points[pi]);
+            var distance = exports.calcularDistancia(candidate, points[pi]);
             if (distance < minDistance) {
                 minDistance = distance;
             }
@@ -60,25 +61,27 @@ exports.uniformPosition = function(points, radius) {
             bestCandidate = candidate;
             maxDistance = minDistance;
         } else {
-            return exports.randomPosition(radius);
+            return exports.gerarPontoAleatoria(radius);
         }
     }
 
     return bestCandidate;
 };
 
-exports.findIndex = function(arr, id) {
-    var len = arr.length;
+// Busca o indice do array do item que tem o mesmo id informado por parametro
+exports.buscaPorId = function(array, id) {
+    var i = array.length;
 
-    while (len--) {
-        if (arr[len].id === id) {
-            return len;
+    while (i--) {
+        if (array[i].id === id) {
+            return i;
         }
     }
 
     return -1;
 };
 
+// Gera um cor aleatoria
 exports.randomColor = function() {
     var color = '#' + ('00000' + (Math.random() * (1 << 24) | 0).toString(16)).slice(-6);
     var c = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color);
