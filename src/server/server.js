@@ -16,10 +16,10 @@ var util = require('./lib/util');
 // Importa a quadtree.
 var quadtree = require('simple-quadtree');
 
-var tree = quadtree(0, 0, c.gameWidth, c.gameHeight);
+var tree = quadtree(0, 0, c.larguraJogo, c.alturaJogo);
 
-var users = [];
-var massFood = [];
+var usuarios = [];
+var massaComidas = [];
 var food = [];
 var sockets = {};
 
@@ -30,12 +30,12 @@ var initMassLog = util.log(c.defaultPlayerMass, c.slowBase);
 
 app.use(express.static(__dirname + '/../client'));
 
-function addFood(toAdd) {
+function addComida(qtdAdicionar) {
     var radius = util.massToRadius(c.foodMass);
-    while (toAdd--) {
+    while (qtdAdicionar--) {
         var position = c.foodUniformDisposition ? util.uniformPosition(food, radius) : util.randomPosition(radius);
         food.push({
-            // Make IDs unique.
+            // Faz os IDs unicos
             id: ((new Date()).getTime() + '' + food.length) >>> 0,
             x: position.x,
             y: position.y,
@@ -46,13 +46,13 @@ function addFood(toAdd) {
     }
 }
 
-function removeFood(toRem) {
-    while (toRem--) {
+function removeComida(qtdRemover) {
+    while (qtdRemover--) {
         food.pop();
     }
 }
 
-function movePlayer(player) {
+function moveJogador(player) {
     var x =0,y =0;
     for(var i=0; i<player.cells.length; i++)
     {
@@ -83,7 +83,7 @@ function movePlayer(player) {
         if (!isNaN(deltaX)) {
             player.cells[i].x += deltaX;
         }
-        // Find best solution.
+        // Acha a melhor solução
         for(var j=0; j<player.cells.length; j++) {
             if(j != i && player.cells[i] !== undefined) {
                 var distance = Math.sqrt(Math.pow(player.cells[j].y-player.cells[i].y,2) + Math.pow(player.cells[j].x-player.cells[i].x,2));
@@ -111,11 +111,11 @@ function movePlayer(player) {
         }
         if(player.cells.length > i) {
             var borderCalc = player.cells[i].radius / 3;
-            if (player.cells[i].x > c.gameWidth - borderCalc) {
-                player.cells[i].x = c.gameWidth - borderCalc;
+            if (player.cells[i].x > c.larguraJogo - borderCalc) {
+                player.cells[i].x = c.larguraJogo - borderCalc;
             }
-            if (player.cells[i].y > c.gameHeight - borderCalc) {
-                player.cells[i].y = c.gameHeight - borderCalc;
+            if (player.cells[i].y > c.alturaJogo - borderCalc) {
+                player.cells[i].y = c.alturaJogo - borderCalc;
             }
             if (player.cells[i].x < borderCalc) {
                 player.cells[i].x = borderCalc;
@@ -131,7 +131,7 @@ function movePlayer(player) {
     player.y = y/player.cells.length;
 }
 
-function moveMass(mass) {
+function moveMassa(mass) {
     var deg = Math.atan2(mass.target.y, mass.target.x);
     var deltaY = mass.speed * Math.sin(deg);
     var deltaX = mass.speed * Math.cos(deg);
@@ -149,11 +149,11 @@ function moveMass(mass) {
 
     var borderCalc = mass.radius + 5;
 
-    if (mass.x > c.gameWidth - borderCalc) {
-        mass.x = c.gameWidth - borderCalc;
+    if (mass.x > c.larguraJogo - borderCalc) {
+        mass.x = c.larguraJogo - borderCalc;
     }
-    if (mass.y > c.gameHeight - borderCalc) {
-        mass.y = c.gameHeight - borderCalc;
+    if (mass.y > c.alturaJogo - borderCalc) {
+        mass.y = c.alturaJogo - borderCalc;
     }
     if (mass.x < borderCalc) {
         mass.x = borderCalc;
@@ -163,27 +163,23 @@ function moveMass(mass) {
     }
 }
 
-function balanceMass() {
+function balanceiaMassa() {
     var totalMass = food.length * c.foodMass +
-        users
+        usuarios
             .map(function(u) {return u.massTotal; })
             .reduce(function(pu,cu) { return pu+cu;}, 0);
 
     var massDiff = c.gameMass - totalMass;
     var maxFoodDiff = c.maxFood - food.length;
     var foodDiff = parseInt(massDiff / c.foodMass) - maxFoodDiff;
-    var foodToAdd = Math.min(foodDiff, maxFoodDiff);
-    var foodToRemove = -Math.max(foodDiff, maxFoodDiff);
+    var qtdAdicionar = Math.min(foodDiff, maxFoodDiff);
+    var qtdRemover = -Math.max(foodDiff, maxFoodDiff);
 
-    if (foodToAdd > 0) {
-        //console.log('[DEBUG] Adding ' + foodToAdd + ' food to level!');
-        addFood(foodToAdd);
-        //console.log('[DEBUG] Mass rebalanced!');
+    if (qtdAdicionar > 0) {
+        addComida(qtdAdicionar);
     }
-    else if (foodToRemove > 0) {
-        //console.log('[DEBUG] Removing ' + foodToRemove + ' food from level!');
-        removeFood(foodToRemove);
-        //console.log('[DEBUG] Mass rebalanced!');
+    else if (qtdRemover > 0) {
+        removeComida(qtdRemover);
     }
 }
 
@@ -192,7 +188,7 @@ io.on('connection', function (socket) {
 
     var type = socket.handshake.query.type;
     var radius = util.massToRadius(c.defaultPlayerMass);
-    var position = c.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(users, radius) : util.randomPosition(radius);
+    var position = c.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(usuarios, radius) : util.randomPosition(radius);
 
     var cells = [];
     var massTotal = 0;
@@ -226,18 +222,15 @@ io.on('connection', function (socket) {
     socket.on('gotit', function (player) {
         console.log('[INFO] Player ' + player.name + ' connecting!');
 
-        if (util.findIndex(users, player.id) > -1) {
+        if (util.findIndex(usuarios, player.id) > -1) {
             console.log('[INFO] Player ID is already connected, kicking.');
-            socket.disconnect();
-        } else if (!util.validNick(player.name)) {
-            socket.emit('kick', 'Invalid username.');
             socket.disconnect();
         } else {
             console.log('[INFO] Player ' + player.name + ' connected!');
             sockets[player.id] = socket;
 
             var radius = util.massToRadius(c.defaultPlayerMass);
-            var position = c.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(users, radius) : util.randomPosition(radius);
+            var position = c.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(usuarios, radius) : util.randomPosition(radius);
 
             player.x = position.x;
             player.y = position.y;
@@ -259,34 +252,34 @@ io.on('connection', function (socket) {
             player.hue = Math.round(Math.random() * 360);
             currentPlayer = player;
             currentPlayer.lastHeartbeat = new Date().getTime();
-            users.push(currentPlayer);
+            usuarios.push(currentPlayer);
 
             io.emit('playerJoin', { name: currentPlayer.name });
 
             socket.emit('gameSetup', {
-                gameWidth: c.gameWidth,
-                gameHeight: c.gameHeight
+                larguraJogo: c.larguraJogo,
+                alturaJogo: c.alturaJogo
             });
-            console.log('Total players: ' + users.length);
+            console.log('Total players: ' + usuarios.length);
         }
 
     });
 
     socket.on('windowResized', function (data) {
-        currentPlayer.screenWidth = data.screenWidth;
-        currentPlayer.screenHeight = data.screenHeight;
+        currentPlayer.larguraTela = data.larguraTela;
+        currentPlayer.alturaTela = data.alturaTela;
     });
 
     socket.on('respawn', function () {
-        if (util.findIndex(users, currentPlayer.id) > -1)
-            users.splice(util.findIndex(users, currentPlayer.id), 1);
+        if (util.findIndex(usuarios, currentPlayer.id) > -1)
+            usuarios.splice(util.findIndex(usuarios, currentPlayer.id), 1);
         socket.emit('welcome', currentPlayer);
         console.log('[INFO] User ' + currentPlayer.name + ' respawned!');
     });
 
     socket.on('disconnect', function () {
-        if (util.findIndex(users, currentPlayer.id) > -1)
-            users.splice(util.findIndex(users, currentPlayer.id), 1);
+        if (util.findIndex(usuarios, currentPlayer.id) > -1)
+            usuarios.splice(util.findIndex(usuarios, currentPlayer.id), 1);
         console.log('[INFO] User ' + currentPlayer.name + ' disconnected!');
 
         socket.broadcast.emit('playerDisconnect', { name: currentPlayer.name });
@@ -308,14 +301,12 @@ io.on('connection', function (socket) {
             socket.broadcast.emit('serverMSG', currentPlayer.name + ' just logged in as admin!');
             currentPlayer.admin = true;
         } else {
-            
-            // TODO: Actually log incorrect passwords.
-              console.log('[ADMIN] ' + currentPlayer.name + ' attempted to log in with incorrect password.');
-              socket.emit('serverMSG', 'Password incorrect, attempt logged.');
+            console.log('[ADMIN] ' + currentPlayer.name + ' attempted to log in with incorrect password.');
+            socket.emit('serverMSG', 'Password incorrect, attempt logged.');
         }
     });
 
-   // Heartbeat function, update everytime.
+   // Função "Heartbeat" faz update a todo tempo
     socket.on('0', function(target) {
         currentPlayer.lastHeartbeat = new Date().getTime();
         if (target.x !== currentPlayer.x || target.y !== currentPlayer.y) {
@@ -324,24 +315,24 @@ io.on('connection', function (socket) {
     });
 });
 
-function tickPlayer(currentPlayer) {
+function tickJogador(currentPlayer) {
     if(currentPlayer.lastHeartbeat < new Date().getTime() - c.maxHeartbeatInterval) {
         sockets[currentPlayer.id].emit('kick', 'Last heartbeat received over ' + c.maxHeartbeatInterval + ' ago.');
         sockets[currentPlayer.id].disconnect();
     }
 
-    movePlayer(currentPlayer);
+    moveJogador(currentPlayer);
 
-    function funcFood(f) {
+    function funcComida(f) {
         return SAT.pointInCircle(new V(f.x, f.y), playerCircle);
     }
 
-    function deleteFood(f) {
+    function deletaComida(f) {
         food[f] = {};
         food.splice(f, 1);
     }
 
-    function eatMass(m) {
+    function comeMassa(m) {
         if(SAT.pointInCircle(new V(m.x, m.y), playerCircle)){
             if(m.id == currentPlayer.id && m.speed > 0 && z == m.num)
                 return false;
@@ -351,7 +342,7 @@ function tickPlayer(currentPlayer) {
         return false;
     }
 
-    function check(user) {
+    function checa(user) {
         for(var i=0; i<user.cells.length; i++) {
             if(user.cells[i].mass > 10 && user.id !== currentPlayer.id) {
                 var response = new SAT.Response();
@@ -375,19 +366,19 @@ function tickPlayer(currentPlayer) {
         return true;
     }
 
-    function collisionCheck(collision) {
+    function checaColisao(collision) {
         if (collision.aUser.mass > collision.bUser.mass * 1.1  && collision.aUser.radius > Math.sqrt(Math.pow(collision.aUser.x - collision.bUser.x, 2) + Math.pow(collision.aUser.y - collision.bUser.y, 2))*1.75) {
             console.log('[DEBUG] Killing user: ' + collision.bUser.id);
             console.log('[DEBUG] Collision info:');
             console.log(collision);
 
-            var numUser = util.findIndex(users, collision.bUser.id);
+            var numUser = util.findIndex(usuarios, collision.bUser.id);
             if (numUser > -1) {
-                if(users[numUser].cells.length > 1) {
-                    users[numUser].massTotal -= collision.bUser.mass;
-                    users[numUser].cells.splice(collision.bUser.num, 1);
+                if(usuarios[numUser].cells.length > 1) {
+                    usuarios[numUser].massTotal -= collision.bUser.mass;
+                    usuarios[numUser].cells.splice(collision.bUser.num, 1);
                 } else {
-                    users.splice(numUser, 1);
+                    usuarios.splice(numUser, 1);
                     io.emit('playerDied', { name: collision.bUser.name });
                     sockets[collision.bUser.id].emit('RIP');
                 }
@@ -404,19 +395,19 @@ function tickPlayer(currentPlayer) {
             currentCell.radius
         );
 
-        var foodEaten = food.map(funcFood)
+        var foodEaten = food.map(funcComida)
             .reduce( function(a, b, c) { return b ? a.concat(c) : a; }, []);
 
-        foodEaten.forEach(deleteFood);
+        foodEaten.forEach(deletaComida);
 
-        var massEaten = massFood.map(eatMass)
+        var massEaten = massaComidas.map(comeMassa)
             .reduce(function(a, b, c) {return b ? a.concat(c) : a; }, []);
 
         var masaGanada = 0;
         for(var m=0; m<massEaten.length; m++) {
-            masaGanada += massFood[massEaten[m]].masa;
-            massFood[massEaten[m]] = {};
-            massFood.splice(massEaten[m],1);
+            masaGanada += massaComidas[massEaten[m]].masa;
+            massaComidas[massEaten[m]] = {};
+            massaComidas.splice(massEaten[m],1);
             for(var n=0; n<massEaten.length; n++) {
                 if(massEaten[m] < massEaten[n]) {
                     massEaten[n]--;
@@ -433,88 +424,88 @@ function tickPlayer(currentPlayer) {
         playerCircle.r = currentCell.radius;
 
         tree.clear();
-        users.forEach(tree.put);
+        usuarios.forEach(tree.put);
         var playerCollisions = [];
 
-        var otherUsers =  tree.get(currentPlayer, check);
+        var otherusuarios =  tree.get(currentPlayer, checa);
 
-        playerCollisions.forEach(collisionCheck);
+        playerCollisions.forEach(checaColisao);
     }
 }
 
-function moveloop() {
-    for (var i = 0; i < users.length; i++) {
-        tickPlayer(users[i]);
+function loopMovimento() {
+    for (var i = 0; i < usuarios.length; i++) {
+        tickJogador(usuarios[i]);
     }
-    for (i=0; i < massFood.length; i++) {
-        if(massFood[i].speed > 0) moveMass(massFood[i]);
+    for (i=0; i < massaComidas.length; i++) {
+        if(massaComidas[i].speed > 0) moveMassa(massaComidas[i]);
     }
 }
 
-function gameloop() {
-    if (users.length > 0) {
-        users.sort( function(a, b) { return b.massTotal - a.massTotal; });
+function loopJogo() {
+    if (usuarios.length > 0) {
+        usuarios.sort( function(a, b) { return b.massTotal - a.massTotal; });
 
-        var topUsers = [];
+        var topusuarios = [];
 
-        for (var i = 0; i < Math.min(10, users.length); i++) {
-            if(users[i].type == 'player') {
-                topUsers.push({
-                    id: users[i].id,
-                    name: users[i].name
+        for (var i = 0; i < Math.min(10, usuarios.length); i++) {
+            if(usuarios[i].type == 'player') {
+                topusuarios.push({
+                    id: usuarios[i].id,
+                    name: usuarios[i].name
                 });
             }
         }
         
-        for (i = 0; i < users.length; i++) {
-            for(var z=0; z < users[i].cells.length; z++) {
-                if (users[i].cells[z].mass * (1 - (c.massLossRate / 1000)) > c.defaultPlayerMass && users[i].massTotal > c.minMassLoss) {
-                    var massLoss = users[i].cells[z].mass * (1 - (c.massLossRate / 1000));
-                    users[i].massTotal -= users[i].cells[z].mass - massLoss;
-                    users[i].cells[z].mass = massLoss;
+        for (i = 0; i < usuarios.length; i++) {
+            for(var z=0; z < usuarios[i].cells.length; z++) {
+                if (usuarios[i].cells[z].mass * (1 - (c.massLossRate / 1000)) > c.defaultPlayerMass && usuarios[i].massTotal > c.minMassLoss) {
+                    var massLoss = usuarios[i].cells[z].mass * (1 - (c.massLossRate / 1000));
+                    usuarios[i].massTotal -= usuarios[i].cells[z].mass - massLoss;
+                    usuarios[i].cells[z].mass = massLoss;
                 }
             }
         }
     }
-    balanceMass();
+    balanceiaMassa();
 }
 
-function sendUpdates() {
-    users.forEach( function(u) {
-        // center the view if x/y is undefined, this will happen for spectators
-        u.x = u.x || c.gameWidth / 2;
-        u.y = u.y || c.gameHeight / 2;
+function enviaUpdates() {
+    usuarios.forEach( function(u) {
+        // centraliza a view se x/y for indefinido, isso vai acontecer para os espectadores
+        u.x = u.x || c.larguraJogo / 2;
+        u.y = u.y || c.alturaJogo / 2;
 
         var visibleFood  = food
             .map(function(f) {
-                if ( f.x > u.x - u.screenWidth/2 - 20 &&
-                    f.x < u.x + u.screenWidth/2 + 20 &&
-                    f.y > u.y - u.screenHeight/2 - 20 &&
-                    f.y < u.y + u.screenHeight/2 + 20) {
+                if ( f.x > u.x - u.larguraTela/2 - 20 &&
+                    f.x < u.x + u.larguraTela/2 + 20 &&
+                    f.y > u.y - u.alturaTela/2 - 20 &&
+                    f.y < u.y + u.alturaTela/2 + 20) {
                     return f;
                 }
             })
             .filter(function(f) { return f; });
 
-        var visibleMass = massFood
+        var visibleMass = massaComidas
             .map(function(f) {
-                if ( f.x+f.radius > u.x - u.screenWidth/2 - 20 &&
-                    f.x-f.radius < u.x + u.screenWidth/2 + 20 &&
-                    f.y+f.radius > u.y - u.screenHeight/2 - 20 &&
-                    f.y-f.radius < u.y + u.screenHeight/2 + 20) {
+                if ( f.x+f.radius > u.x - u.larguraTela/2 - 20 &&
+                    f.x-f.radius < u.x + u.larguraTela/2 + 20 &&
+                    f.y+f.radius > u.y - u.alturaTela/2 - 20 &&
+                    f.y-f.radius < u.y + u.alturaTela/2 + 20) {
                     return f;
                 }
             })
             .filter(function(f) { return f; });
 
-        var visibleCells  = users
+        var visibleCells  = usuarios
             .map(function(f) {
                 for(var z=0; z<f.cells.length; z++)
                 {
-                    if ( f.cells[z].x+f.cells[z].radius > u.x - u.screenWidth/2 - 20 &&
-                        f.cells[z].x-f.cells[z].radius < u.x + u.screenWidth/2 + 20 &&
-                        f.cells[z].y+f.cells[z].radius > u.y - u.screenHeight/2 - 20 &&
-                        f.cells[z].y-f.cells[z].radius < u.y + u.screenHeight/2 + 20) {
+                    if ( f.cells[z].x+f.cells[z].radius > u.x - u.larguraTela/2 - 20 &&
+                        f.cells[z].x-f.cells[z].radius < u.x + u.larguraTela/2 + 20 &&
+                        f.cells[z].y+f.cells[z].radius > u.y - u.alturaTela/2 - 20 &&
+                        f.cells[z].y-f.cells[z].radius < u.y + u.alturaTela/2 + 20) {
                         z = f.cells.lenth;
                         if(f.id !== u.id) {
                             return {
@@ -527,7 +518,6 @@ function sendUpdates() {
                                 name: f.name
                             };
                         } else {
-                            //console.log("Nombre: " + f.name + " Es Usuario");
                             return {
                                 x: f.x,
                                 y: f.y,
@@ -545,9 +535,9 @@ function sendUpdates() {
     });
 }
 
-setInterval(moveloop, 1000 / 60);
-setInterval(gameloop, 1000);
-setInterval(sendUpdates, 1000 / c.networkUpdateFactor);
+setInterval(loopMovimento, 1000 / 60);
+setInterval(loopJogo, 1000);
+setInterval(enviaUpdates, 1000 / c.networkUpdateFactor);
 
 // Don't touch, IP configurations.
 var ipaddress = process.env.OPENSHIFT_NODEJS_IP || process.env.IP || c.host;
