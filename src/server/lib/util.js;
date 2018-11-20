@@ -4,11 +4,6 @@
 
 var cfg = require('../../../config.json');
 
-exports.validNick = function(nickname) {
-    var regex = /^\w*$/;
-    return regex.exec(nickname) !== null;
-};
-
 // determine mass from radius of circle
 exports.massToRadius = function (mass) {
     return 4 + Math.sqrt(mass) * 6;
@@ -35,8 +30,8 @@ exports.randomInRange = function (from, to) {
 // generate a random position within the field of play
 exports.randomPosition = function (radius) {
     return {
-        x: exports.randomInRange(radius, cfg.gameWidth - radius),
-        y: exports.randomInRange(radius, cfg.gameHeight - radius)
+        x: exports.randomInRange(radius, cfg.larguraJogo - radius),
+        y: exports.randomInRange(radius, cfg.alturaJogo - radius)
     };
 };
 
