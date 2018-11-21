@@ -2,7 +2,7 @@ module.exports = {
     // Atalhos/teclas e outras constantes matemáticas
     KEY_ESC: 27,
     KEY_ENTER: 13,
-    borderDraw: false,
+    desenharBorda: false,
     spin: -Math.PI,
     ladosComida: 10,  
 
@@ -13,11 +13,11 @@ module.exports = {
     alturaJogo: 0,
     xoffset: -0,
     yoffset: -0,
-    gameStart: false,
+    jogoIniciado: false,
     desconectado: false,
     morreu: false,
     kickado: false,
-    toggleMassState: 0,
+    alternarEstadoMassa: 0,
     backgroundColor: '#f2fbff',
     lineColor: '#000000',
 };
