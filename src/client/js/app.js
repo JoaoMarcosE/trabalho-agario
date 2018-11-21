@@ -420,7 +420,7 @@ function gameLoop() {
             graph.textAlign = 'center';
             graph.fillStyle = '#FFFFFF';
             graph.font = 'bold 30px sans-serif';
-            graph.fillText('Game Over!', global.larguraTela / 2, global.alturaTela / 2);
+            graph.fillText('Carregando ..', global.larguraTela / 2, global.alturaTela / 2);
         }
     } else {
         graph.fillStyle = '#333333';
