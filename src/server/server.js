@@ -20,7 +20,7 @@ var tree = quadtree(0, 0, c.larguraJogo, c.alturaJogo);
 
 var usuarios = [];
 var massaComidas = [];
-var food = [];
+var comidas = [];
 var sockets = {};
 
 var V = SAT.Vector;
@@ -34,14 +34,14 @@ app.use(express.static(__dirname + '/../client'));
 function addComida(qtdAdicionar) {
     var raio = util.calculaRaio(c.massaComida);
     while (qtdAdicionar--) {
-        var ponto = c.disposicaoUniformeComida ? util.uniformPosition(food, raio) : util.gerarPontoAleatoria(raio);
-        food.push({
+        var ponto = c.disposicaoUniformeComida ? util.gerarPosicaoUniforme(comidas, raio) : util.gerarPosicaoAleatoria(raio);
+        comidas.push({
             // Gera um ID unico
-            id: ((new Date()).getTime() + '' + food.length) >>> 0,
+            id: ((new Date()).getTime() + '' + comidas.length) >>> 0,
             x: ponto.x,
             y: ponto.y,
-            radius: raio,
-            mass: Math.random() + 2,
+            raio: raio,
+            massa: Math.random() + 2,
             hue: Math.round(Math.random() * 360)
         });
     }
@@ -50,131 +50,131 @@ function addComida(qtdAdicionar) {
 // Remove da lista de comida a quantidade informada como parametro
 function removeComida(qtdRemover) {
     while (qtdRemover--) {
-        food.pop();
+        comidas.pop();
     }
 }
 
-function moveJogador(player) {
+function moveJogador(jogador) {
     var x =0,y =0;
-    for(var i=0; i<player.cells.length; i++)
+    for(var i=0; i<jogador.celulas.length; i++)
     {
         var target = {
-            x: player.x - player.cells[i].x + player.target.x,
-            y: player.y - player.cells[i].y + player.target.y
+            x: jogador.x - jogador.celulas[i].x + jogador.target.x,
+            y: jogador.y - jogador.celulas[i].y + jogador.target.y
         };
         var dist = Math.sqrt(Math.pow(target.y, 2) + Math.pow(target.x, 2));
         var deg = Math.atan2(target.y, target.x);
-        var slowDown = 1;
-        if(player.cells[i].speed <= 6.25) {
-            slowDown = util.dividirLog(player.cells[i].mass, c.desaceleracaoBase) - initMassLog + 1;
+        var desaceleracao = 1;
+        if(jogador.celulas[i].velocidade <= 6.25) {
+            desaceleracao = util.dividirLog(jogador.celulas[i].massa, c.desaceleracaoBase) - initMassLog + 1;
         }
 
-        var deltaY = player.cells[i].speed * Math.sin(deg)/ slowDown;
-        var deltaX = player.cells[i].speed * Math.cos(deg)/ slowDown;
+        var deltaY = jogador.celulas[i].velocidade * Math.sin(deg)/ desaceleracao;
+        var deltaX = jogador.celulas[i].velocidade * Math.cos(deg)/ desaceleracao;
 
-        if(player.cells[i].speed > 6.25) {
-            player.cells[i].speed -= 0.5;
+        if(jogador.celulas[i].velocidade > 6.25) {
+            jogador.celulas[i].velocidade -= 0.5;
         }
-        if (dist < (50 + player.cells[i].radius)) {
-            deltaY *= dist / (50 + player.cells[i].radius);
-            deltaX *= dist / (50 + player.cells[i].radius);
+        if (dist < (50 + jogador.celulas[i].raio)) {
+            deltaY *= dist / (50 + jogador.celulas[i].raio);
+            deltaX *= dist / (50 + jogador.celulas[i].raio);
         }
         if (!isNaN(deltaY)) {
-            player.cells[i].y += deltaY;
+            jogador.celulas[i].y += deltaY;
         }
         if (!isNaN(deltaX)) {
-            player.cells[i].x += deltaX;
+            jogador.celulas[i].x += deltaX;
         }
         // Acha a melhor solução
-        for(var j=0; j<player.cells.length; j++) {
-            if(j != i && player.cells[i] !== undefined) {
-                var distance = Math.sqrt(Math.pow(player.cells[j].y-player.cells[i].y,2) + Math.pow(player.cells[j].x-player.cells[i].x,2));
-                var radiusTotal = (player.cells[i].radius + player.cells[j].radius);
-                if(distance < radiusTotal) {
-                    if(player.lastSplit > new Date().getTime() - 1000 * c.mergeTimer) {
-                        if(player.cells[i].x < player.cells[j].x) {
-                            player.cells[i].x--;
-                        } else if(player.cells[i].x > player.cells[j].x) {
-                            player.cells[i].x++;
+        for(var j=0; j<jogador.celulas.length; j++) {
+            if(j != i && jogador.celulas[i] !== undefined) {
+                var distance = Math.sqrt(Math.pow(jogador.celulas[j].y-jogador.celulas[i].y,2) + Math.pow(jogador.celulas[j].x-jogador.celulas[i].x,2));
+                var raioTotal = (jogador.celulas[i].raio + jogador.celulas[j].raio);
+                if(distance < raioTotal) {
+                    if(jogador.lastSplit > new Date().getTime() - 1000 * c.mergeTimer) {
+                        if(jogador.celulas[i].x < jogador.celulas[j].x) {
+                            jogador.celulas[i].x--;
+                        } else if(jogador.celulas[i].x > jogador.celulas[j].x) {
+                            jogador.celulas[i].x++;
                         }
-                        if(player.cells[i].y < player.cells[j].y) {
-                            player.cells[i].y--;
-                        } else if((player.cells[i].y > player.cells[j].y)) {
-                            player.cells[i].y++;
+                        if(jogador.celulas[i].y < jogador.celulas[j].y) {
+                            jogador.celulas[i].y--;
+                        } else if((jogador.celulas[i].y > jogador.celulas[j].y)) {
+                            jogador.celulas[i].y++;
                         }
                     }
-                    else if(distance < radiusTotal / 1.75) {
-                        player.cells[i].mass += player.cells[j].mass;
-                        player.cells[i].radius = util.calculaRaio(player.cells[i].mass);
-                        player.cells.splice(j, 1);
+                    else if(distance < raioTotal / 1.75) {
+                        jogador.celulas[i].massa += jogador.celulas[j].massa;
+                        jogador.celulas[i].raio = util.calculaRaio(jogador.celulas[i].massa);
+                        jogador.celulas.splice(j, 1);
                     }
                 }
             }
         }
-        if(player.cells.length > i) {
-            var borderCalc = player.cells[i].radius / 3;
-            if (player.cells[i].x > c.larguraJogo - borderCalc) {
-                player.cells[i].x = c.larguraJogo - borderCalc;
+        if(jogador.celulas.length > i) {
+            var calcBorda = jogador.celulas[i].raio / 3;
+            if (jogador.celulas[i].x > c.larguraJogo - calcBorda) {
+                jogador.celulas[i].x = c.larguraJogo - calcBorda;
             }
-            if (player.cells[i].y > c.alturaJogo - borderCalc) {
-                player.cells[i].y = c.alturaJogo - borderCalc;
+            if (jogador.celulas[i].y > c.alturaJogo - calcBorda) {
+                jogador.celulas[i].y = c.alturaJogo - calcBorda;
             }
-            if (player.cells[i].x < borderCalc) {
-                player.cells[i].x = borderCalc;
+            if (jogador.celulas[i].x < calcBorda) {
+                jogador.celulas[i].x = calcBorda;
             }
-            if (player.cells[i].y < borderCalc) {
-                player.cells[i].y = borderCalc;
+            if (jogador.celulas[i].y < calcBorda) {
+                jogador.celulas[i].y = calcBorda;
             }
-            x += player.cells[i].x;
-            y += player.cells[i].y;
+            x += jogador.celulas[i].x;
+            y += jogador.celulas[i].y;
         }
     }
-    player.x = x/player.cells.length;
-    player.y = y/player.cells.length;
+    jogador.x = x/jogador.celulas.length;
+    jogador.y = y/jogador.celulas.length;
 }
 
-function moveMassa(mass) {
-    var deg = Math.atan2(mass.target.y, mass.target.x);
-    var deltaY = mass.speed * Math.sin(deg);
-    var deltaX = mass.speed * Math.cos(deg);
+function moveMassa(massa) {
+    var deg = Math.atan2(massa.target.y, massa.target.x);
+    var deltaY = massa.velocidade * Math.sin(deg);
+    var deltaX = massa.velocidade * Math.cos(deg);
 
-    mass.speed -= 0.5;
-    if(mass.speed < 0) {
-        mass.speed = 0;
+    massa.velocidade -= 0.5;
+    if(massa.velocidade < 0) {
+        massa.velocidade = 0;
     }
     if (!isNaN(deltaY)) {
-        mass.y += deltaY;
+        massa.y += deltaY;
     }
     if (!isNaN(deltaX)) {
-        mass.x += deltaX;
+        massa.x += deltaX;
     }
 
-    var borderCalc = mass.radius + 5;
+    var calcBorda = massa.raio + 5;
 
-    if (mass.x > c.larguraJogo - borderCalc) {
-        mass.x = c.larguraJogo - borderCalc;
+    if (massa.x > c.larguraJogo - calcBorda) {
+        massa.x = c.larguraJogo - calcBorda;
     }
-    if (mass.y > c.alturaJogo - borderCalc) {
-        mass.y = c.alturaJogo - borderCalc;
+    if (massa.y > c.alturaJogo - calcBorda) {
+        massa.y = c.alturaJogo - calcBorda;
     }
-    if (mass.x < borderCalc) {
-        mass.x = borderCalc;
+    if (massa.x < calcBorda) {
+        massa.x = calcBorda;
     }
-    if (mass.y < borderCalc) {
-        mass.y = borderCalc;
+    if (massa.y < calcBorda) {
+        massa.y = calcBorda;
     }
 }
 
 // Adiciona ou remove o numero de massa do jogo,
 // adicionando ou removendo a comida do jogo
 function balanceiaMassa() {
-    var totalMassaUtilizada = food.length * c.massaComida +
+    var totalMassaUtilizada = comidas.length * c.massaComida +
         usuarios
-            .map(function(u) {return u.massTotal; })
+            .map(function(u) {return u.massaTotal; })
             .reduce(function(massaAcumulada, massaAtual) { return massaAcumulada+massaAtual;}, 0);
 
     var massaSobrando = c.massaJogo - totalMassaUtilizada;
-    var maxComidaSobrando = c.qtdMaxComida - food.length;
+    var maxComidaSobrando = c.qtdMaxComida - comidas.length;
     var comidaSobrando = parseInt(massaSobrando / c.massaComida) - maxComidaSobrando;
     var qtdAdicionar = Math.min(comidaSobrando, maxComidaSobrando);
     var qtdRemover = -Math.max(comidaSobrando, maxComidaSobrando);
@@ -189,34 +189,34 @@ function balanceiaMassa() {
 
 // 
 io.on('connection', function (socket) {
-    console.log('A user connected!', socket.handshake.query.type);
+    console.log('Um usuário conectou!', socket.handshake.query.tipo);
 
-    var type = socket.handshake.query.type;
-    var radius = util.calculaRaio(c.massaPadraoJogador);
-    var position = c.posInicialNovoJogador == 'farthest' ? util.uniformPosition(usuarios, radius) : util.gerarPontoAleatoria(radius);
+    var tipo = socket.handshake.query.tipo;
+    var raio = util.calculaRaio(c.massaPadraoJogador);
+    var posicao = c.posInicialNovoJogador == 'distante' ? util.gerarPosicaoUniforme(usuarios, raio) : util.gerarPosicaoAleatoria(raio);
 
-    var cells = [];
-    var massTotal = 0;
-    if(type === 'player') {
-        cells = [{
-            mass: c.massaPadraoJogador,
-            x: position.x,
-            y: position.y,
-            radius: radius
+    var celulas = [];
+    var massaTotal = 0;
+    if(tipo === 'jogador') {
+        celulas = [{
+            massa: c.massaPadraoJogador,
+            x: posicao.x,
+            y: posicao.y,
+            raio: raio
         }];
-        massTotal = c.massaPadraoJogador;
+        massaTotal = c.massaPadraoJogador;
     }
 
-    var currentPlayer = {
+    var jogadorAtual = {
         id: socket.id,
-        x: position.x,
-        y: position.y,
+        x: posicao.x,
+        y: posicao.y,
         w: c.massaPadraoJogador,
         h: c.massaPadraoJogador,
-        cells: cells,
-        massTotal: massTotal,
+        celulas: celulas,
+        massaTotal: massaTotal,
         hue: Math.round(Math.random() * 360),
-        type: type,
+        tipo: tipo,
         lastHeartbeat: new Date().getTime(),
         target: {
             x: 0,
@@ -224,147 +224,126 @@ io.on('connection', function (socket) {
         }
     };
 
-    socket.on('gotit', function (player) {
-        console.log('[INFO] Player ' + player.name + ' connecting!');
+    socket.on('gotit', function (jogador) {
+        console.log('[INFO] Jogador ' + jogador.nome + ' conectando!');
 
-        if (util.buscaPorId(usuarios, player.id) > -1) {
-            console.log('[INFO] Player ID is already connected, kicking.');
+        if (util.buscaPorId(usuarios, jogador.id) > -1) {
+            console.log('[INFO] Esse ID de jogador já está conectado, kickando.');
             socket.disconnect();
         } else {
-            console.log('[INFO] Player ' + player.name + ' connected!');
-            sockets[player.id] = socket;
+            console.log('[INFO] Jogador ' + jogador.nome + ' conectou!');
+            sockets[jogador.id] = socket;
 
-            var radius = util.calculaRaio(c.massaPadraoJogador);
-            var position = c.posInicialNovoJogador == 'farthest' ? util.uniformPosition(usuarios, radius) : util.gerarPontoAleatoria(radius);
+            var raio = util.calculaRaio(c.massaPadraoJogador);
+            var posicao = c.posInicialNovoJogador == 'distante' ? util.gerarPosicaoUniforme(usuarios, raio) : util.gerarPosicaoAleatoria(raio);
 
-            player.x = position.x;
-            player.y = position.y;
-            player.target.x = 0;
-            player.target.y = 0;
-            if(type === 'player') {
-                player.cells = [{
-                    mass: c.massaPadraoJogador,
-                    x: position.x,
-                    y: position.y,
-                    radius: radius
+            jogador.x = posicao.x;
+            jogador.y = posicao.y;
+            jogador.target.x = 0;
+            jogador.target.y = 0;
+            if(tipo === 'jogador') {
+                jogador.celulas = [{
+                    massa: c.massaPadraoJogador,
+                    x: posicao.x,
+                    y: posicao.y,
+                    raio: raio
                 }];
-                player.massTotal = c.massaPadraoJogador;
+                jogador.massaTotal = c.massaPadraoJogador;
             }
             else {
-                 player.cells = [];
-                 player.massTotal = 0;
+                 jogador.celulas = [];
+                 jogador.massaTotal = 0;
             }
-            player.hue = Math.round(Math.random() * 360);
-            currentPlayer = player;
-            currentPlayer.lastHeartbeat = new Date().getTime();
-            usuarios.push(currentPlayer);
+            jogador.hue = Math.round(Math.random() * 360);
+            jogadorAtual = jogador;
+            jogadorAtual.lastHeartbeat = new Date().getTime();
+            usuarios.push(jogadorAtual);
 
-            io.emit('playerJoin', { name: currentPlayer.name });
+            io.emit('playerJoin', { nome: jogadorAtual.nome });
 
             socket.emit('gameSetup', {
                 larguraJogo: c.larguraJogo,
                 alturaJogo: c.alturaJogo
             });
-            console.log('Total players: ' + usuarios.length);
+            console.log('Total de jogadores: ' + usuarios.length);
         }
 
     });
 
     socket.on('windowResized', function (data) {
-        currentPlayer.larguraTela = data.larguraTela;
-        currentPlayer.alturaTela = data.alturaTela;
+        jogadorAtual.larguraTela = data.larguraTela;
+        jogadorAtual.alturaTela = data.alturaTela;
     });
 
     socket.on('respawn', function () {
-        if (util.buscaPorId(usuarios, currentPlayer.id) > -1)
-            usuarios.splice(util.buscaPorId(usuarios, currentPlayer.id), 1);
-        socket.emit('welcome', currentPlayer);
-        console.log('[INFO] User ' + currentPlayer.name + ' respawned!');
+        if (util.buscaPorId(usuarios, jogadorAtual.id) > -1)
+            usuarios.splice(util.buscaPorId(usuarios, jogadorAtual.id), 1);
+        socket.emit('welcome', jogadorAtual);
+        console.log('[INFO] Usuário ' + jogadorAtual.nome + ' respawnou!');
     });
 
     socket.on('disconnect', function () {
-        if (util.buscaPorId(usuarios, currentPlayer.id) > -1)
-            usuarios.splice(util.buscaPorId(usuarios, currentPlayer.id), 1);
-        console.log('[INFO] User ' + currentPlayer.name + ' disconnected!');
+        if (util.buscaPorId(usuarios, jogadorAtual.id) > -1)
+            usuarios.splice(util.buscaPorId(usuarios, jogadorAtual.id), 1);
+        console.log('[INFO] Usuário ' + jogadorAtual.nome + ' desconectou!');
 
-        socket.broadcast.emit('playerDisconnect', { name: currentPlayer.name });
-    });
-
-    socket.on('playerChat', function(data) {
-        var _sender = data.sender.replace(/(<([^>]+)>)/ig, '');
-        var _message = data.message.replace(/(<([^>]+)>)/ig, '');
-        if (c.logChat === 1) {
-            console.log('[CHAT] [' + (new Date()).getHours() + ':' + (new Date()).getMinutes() + '] ' + _sender + ': ' + _message);
-        }
-        socket.broadcast.emit('serverSendPlayerChat', {sender: _sender, message: _message.substring(0,35)});
-    });
-
-    socket.on('pass', function(data) {
-        if (data[0] === c.adminPass) {
-            console.log('[ADMIN] ' + currentPlayer.name + ' just logged in as an admin!');
-            socket.emit('serverMSG', 'Welcome back ' + currentPlayer.name);
-            socket.broadcast.emit('serverMSG', currentPlayer.name + ' just logged in as admin!');
-            currentPlayer.admin = true;
-        } else {
-            console.log('[ADMIN] ' + currentPlayer.name + ' attempted to log in with incorrect password.');
-            socket.emit('serverMSG', 'Password incorrect, attempt logged.');
-        }
+        socket.broadcast.emit('playerDisconnect', { nome: jogadorAtual.nome });
     });
 
    // Função "Heartbeat" faz update a todo tempo
     socket.on('0', function(target) {
-        currentPlayer.lastHeartbeat = new Date().getTime();
-        if (target.x !== currentPlayer.x || target.y !== currentPlayer.y) {
-            currentPlayer.target = target;
+        jogadorAtual.lastHeartbeat = new Date().getTime();
+        if (target.x !== jogadorAtual.x || target.y !== jogadorAtual.y) {
+            jogadorAtual.target = target;
         }
     });
 });
 
-function tickJogador(currentPlayer) {
-    if(currentPlayer.lastHeartbeat < new Date().getTime() - c.intervaloMaxHeartbeat) {
-        sockets[currentPlayer.id].emit('kick', 'Last heartbeat received over ' + c.intervaloMaxHeartbeat + ' ago.');
-        sockets[currentPlayer.id].disconnect();
+function tickJogador(jogadorAtual) {
+    if(jogadorAtual.lastHeartbeat < new Date().getTime() - c.intervaloMaxHeartbeat) {
+        sockets[jogadorAtual.id].emit('kick', 'Ultimo heartbeat recebido há ' + c.intervaloMaxHeartbeat + ' segundos.');
+        sockets[jogadorAtual.id].disconnect();
     }
 
-    moveJogador(currentPlayer);
+    moveJogador(jogadorAtual);
 
     function funcComida(f) {
         return SAT.pointInCircle(new V(f.x, f.y), playerCircle);
     }
 
     function deletaComida(f) {
-        food[f] = {};
-        food.splice(f, 1);
+        comidas[f] = {};
+        comidas.splice(f, 1);
     }
 
     function comeMassa(m) {
         if(SAT.pointInCircle(new V(m.x, m.y), playerCircle)){
-            if(m.id == currentPlayer.id && m.speed > 0 && z == m.num)
+            if(m.id == jogadorAtual.id && m.velocidade > 0 && z == m.num)
                 return false;
-            if(currentCell.mass > m.masa * 1.1)
+            if(celulaAtual.massa > m.masa * 1.1)
                 return true;
         }
         return false;
     }
 
-    function checa(user) {
-        for(var i=0; i<user.cells.length; i++) {
-            if(user.cells[i].mass > 10 && user.id !== currentPlayer.id) {
+    function checa(usuario) {
+        for(var i=0; i<usuario.celulas.length; i++) {
+            if(usuario.celulas[i].massa > 10 && usuario.id !== jogadorAtual.id) {
                 var response = new SAT.Response();
                 var collided = SAT.testCircleCircle(playerCircle,
-                    new C(new V(user.cells[i].x, user.cells[i].y), user.cells[i].radius),
+                    new C(new V(usuario.celulas[i].x, usuario.celulas[i].y), usuario.celulas[i].raio),
                     response);
                 if (collided) {
-                    response.aUser = currentCell;
+                    response.aUser = celulaAtual;
                     response.bUser = {
-                        id: user.id,
-                        name: user.name,
-                        x: user.cells[i].x,
-                        y: user.cells[i].y,
+                        id: usuario.id,
+                        nome: usuario.nome,
+                        x: usuario.celulas[i].x,
+                        y: usuario.celulas[i].y,
                         num: i,
-                        mass: user.cells[i].mass
+                        massa: usuario.celulas[i].massa
                     };
-                    playerCollisions.push(response);
+                    colisoesJogador.push(response);
                 }
             }
         }
@@ -372,69 +351,69 @@ function tickJogador(currentPlayer) {
     }
 
     function checaColisao(collision) {
-        if (collision.aUser.mass > collision.bUser.mass * 1.1  && collision.aUser.radius > Math.sqrt(Math.pow(collision.aUser.x - collision.bUser.x, 2) + Math.pow(collision.aUser.y - collision.bUser.y, 2))*1.75) {
-            console.log('[DEBUG] Killing user: ' + collision.bUser.id);
-            console.log('[DEBUG] Collision info:');
+        if (collision.aUser.massa > collision.bUser.massa * 1.1  && collision.aUser.raio > Math.sqrt(Math.pow(collision.aUser.x - collision.bUser.x, 2) + Math.pow(collision.aUser.y - collision.bUser.y, 2))*1.75) {
+            console.log('[DEBUG] Matando usuário: ' + collision.bUser.id);
+            console.log('[DEBUG] Informação de colisão:');
             console.log(collision);
 
             var numUser = util.buscaPorId(usuarios, collision.bUser.id);
             if (numUser > -1) {
-                if(usuarios[numUser].cells.length > 1) {
-                    usuarios[numUser].massTotal -= collision.bUser.mass;
-                    usuarios[numUser].cells.splice(collision.bUser.num, 1);
+                if(usuarios[numUser].celulas.length > 1) {
+                    usuarios[numUser].massaTotal -= collision.bUser.massa;
+                    usuarios[numUser].celulas.splice(collision.bUser.num, 1);
                 } else {
                     usuarios.splice(numUser, 1);
-                    io.emit('playerDied', { name: collision.bUser.name });
+                    io.emit('playerDied', { nome: collision.bUser.nome });
                     sockets[collision.bUser.id].emit('RIP');
                 }
             }
-            currentPlayer.massTotal += collision.bUser.mass;
-            collision.aUser.mass += collision.bUser.mass;
+            jogadorAtual.massaTotal += collision.bUser.massa;
+            collision.aUser.massa += collision.bUser.massa;
         }
     }
 
-    for(var z=0; z<currentPlayer.cells.length; z++) {
-        var currentCell = currentPlayer.cells[z];
+    for(var z=0; z<jogadorAtual.celulas.length; z++) {
+        var celulaAtual = jogadorAtual.celulas[z];
         var playerCircle = new C(
-            new V(currentCell.x, currentCell.y),
-            currentCell.radius
+            new V(celulaAtual.x, celulaAtual.y),
+            celulaAtual.raio
         );
 
-        var foodEaten = food.map(funcComida)
+        var comidaDigerida = comidas.map(funcComida)
             .reduce( function(a, b, c) { return b ? a.concat(c) : a; }, []);
 
-        foodEaten.forEach(deletaComida);
+        comidaDigerida.forEach(deletaComida);
 
-        var massEaten = massaComidas.map(comeMassa)
+        var massaDigerida = massaComidas.map(comeMassa)
             .reduce(function(a, b, c) {return b ? a.concat(c) : a; }, []);
 
         var masaGanada = 0;
-        for(var m=0; m<massEaten.length; m++) {
-            masaGanada += massaComidas[massEaten[m]].masa;
-            massaComidas[massEaten[m]] = {};
-            massaComidas.splice(massEaten[m],1);
-            for(var n=0; n<massEaten.length; n++) {
-                if(massEaten[m] < massEaten[n]) {
-                    massEaten[n]--;
+        for(var m=0; m<massaDigerida.length; m++) {
+            masaGanada += massaComidas[massaDigerida[m]].masa;
+            massaComidas[massaDigerida[m]] = {};
+            massaComidas.splice(massaDigerida[m],1);
+            for(var n=0; n<massaDigerida.length; n++) {
+                if(massaDigerida[m] < massaDigerida[n]) {
+                    massaDigerida[n]--;
                 }
             }
         }
 
-        if(typeof(currentCell.speed) == "undefined")
-            currentCell.speed = 6.25;
-        masaGanada += (foodEaten.length * c.massaComida);
-        currentCell.mass += masaGanada;
-        currentPlayer.massTotal += masaGanada;
-        currentCell.radius = util.calculaRaio(currentCell.mass);
-        playerCircle.r = currentCell.radius;
+        if(typeof(celulaAtual.velocidade) == "undefined")
+            celulaAtual.velocidade = 6.25;
+        masaGanada += (comidaDigerida.length * c.massaComida);
+        celulaAtual.massa += masaGanada;
+        jogadorAtual.massaTotal += masaGanada;
+        celulaAtual.raio = util.calculaRaio(celulaAtual.massa);
+        playerCircle.r = celulaAtual.raio;
 
         tree.clear();
         usuarios.forEach(tree.put);
-        var playerCollisions = [];
+        var colisoesJogador = [];
 
-        var otherusuarios =  tree.get(currentPlayer, checa);
+        var outrosusuarios =  tree.get(jogadorAtual, checa);
 
-        playerCollisions.forEach(checaColisao);
+        colisoesJogador.forEach(checaColisao);
     }
 }
 
@@ -443,31 +422,31 @@ function loopMovimento() {
         tickJogador(usuarios[i]);
     }
     for (i=0; i < massaComidas.length; i++) {
-        if(massaComidas[i].speed > 0) moveMassa(massaComidas[i]);
+        if(massaComidas[i].velocidade > 0) moveMassa(massaComidas[i]);
     }
 }
 
 function loopJogo() {
     if (usuarios.length > 0) {
-        usuarios.sort( function(a, b) { return b.massTotal - a.massTotal; });
+        usuarios.sort( function(a, b) { return b.massaTotal - a.massaTotal; });
 
         var topusuarios = [];
 
         for (var i = 0; i < Math.min(10, usuarios.length); i++) {
-            if(usuarios[i].type == 'player') {
+            if(usuarios[i].tipo == 'jogador') {
                 topusuarios.push({
                     id: usuarios[i].id,
-                    name: usuarios[i].name
+                    nome: usuarios[i].nome
                 });
             }
         }
         
         for (i = 0; i < usuarios.length; i++) {
-            for(var z=0; z < usuarios[i].cells.length; z++) {
-                if (usuarios[i].cells[z].mass * (1 - (c.taxaPerdaMassa / 1000)) > c.massaPadraoJogador && usuarios[i].massTotal > c.qtdMinPerdaMassa) {
-                    var massLoss = usuarios[i].cells[z].mass * (1 - (c.taxaPerdaMassa / 1000));
-                    usuarios[i].massTotal -= usuarios[i].cells[z].mass - massLoss;
-                    usuarios[i].cells[z].mass = massLoss;
+            for(var z=0; z < usuarios[i].celulas.length; z++) {
+                if (usuarios[i].celulas[z].massa * (1 - (c.taxaPerdaMassa / 1000)) > c.massaPadraoJogador && usuarios[i].massaTotal > c.qtdMinPerdaMassa) {
+                    var perdaMassa = usuarios[i].celulas[z].massa * (1 - (c.taxaPerdaMassa / 1000));
+                    usuarios[i].massaTotal -= usuarios[i].celulas[z].massa - perdaMassa;
+                    usuarios[i].celulas[z].massa = perdaMassa;
                 }
             }
         }
@@ -477,11 +456,10 @@ function loopJogo() {
 
 function enviaUpdates() {
     usuarios.forEach( function(u) {
-        // centraliza a view se x/y for indefinido, isso vai acontecer para os espectadores
         u.x = u.x || c.larguraJogo / 2;
         u.y = u.y || c.alturaJogo / 2;
 
-        var visibleFood  = food
+        var comidasVisiveis  = comidas
             .map(function(f) {
                 if ( f.x > u.x - u.larguraTela/2 - 20 &&
                     f.x < u.x + u.larguraTela/2 + 20 &&
@@ -492,42 +470,42 @@ function enviaUpdates() {
             })
             .filter(function(f) { return f; });
 
-        var visibleMass = massaComidas
+        var massaVisivel = massaComidas
             .map(function(f) {
-                if ( f.x+f.radius > u.x - u.larguraTela/2 - 20 &&
-                    f.x-f.radius < u.x + u.larguraTela/2 + 20 &&
-                    f.y+f.radius > u.y - u.alturaTela/2 - 20 &&
-                    f.y-f.radius < u.y + u.alturaTela/2 + 20) {
+                if ( f.x+f.raio > u.x - u.larguraTela/2 - 20 &&
+                    f.x-f.raio < u.x + u.larguraTela/2 + 20 &&
+                    f.y+f.raio > u.y - u.alturaTela/2 - 20 &&
+                    f.y-f.raio < u.y + u.alturaTela/2 + 20) {
                     return f;
                 }
             })
             .filter(function(f) { return f; });
 
-        var visibleCells  = usuarios
+        var celulasVisiveis  = usuarios
             .map(function(f) {
-                for(var z=0; z<f.cells.length; z++)
+                for(var z=0; z<f.celulas.length; z++)
                 {
-                    if ( f.cells[z].x+f.cells[z].radius > u.x - u.larguraTela/2 - 20 &&
-                        f.cells[z].x-f.cells[z].radius < u.x + u.larguraTela/2 + 20 &&
-                        f.cells[z].y+f.cells[z].radius > u.y - u.alturaTela/2 - 20 &&
-                        f.cells[z].y-f.cells[z].radius < u.y + u.alturaTela/2 + 20) {
-                        z = f.cells.lenth;
+                    if ( f.celulas[z].x+f.celulas[z].raio > u.x - u.larguraTela/2 - 20 &&
+                        f.celulas[z].x-f.celulas[z].raio < u.x + u.larguraTela/2 + 20 &&
+                        f.celulas[z].y+f.celulas[z].raio > u.y - u.alturaTela/2 - 20 &&
+                        f.celulas[z].y-f.celulas[z].raio < u.y + u.alturaTela/2 + 20) {
+                        z = f.celulas.lenth;
                         if(f.id !== u.id) {
                             return {
                                 id: f.id,
                                 x: f.x,
                                 y: f.y,
-                                cells: f.cells,
-                                massTotal: Math.round(f.massTotal),
+                                celulas: f.celulas,
+                                massaTotal: Math.round(f.massaTotal),
                                 hue: f.hue,
-                                name: f.name
+                                nome: f.nome
                             };
                         } else {
                             return {
                                 x: f.x,
                                 y: f.y,
-                                cells: f.cells,
-                                massTotal: Math.round(f.massTotal),
+                                celulas: f.celulas,
+                                massaTotal: Math.round(f.massaTotal),
                                 hue: f.hue,
                             };
                         }
@@ -536,7 +514,7 @@ function enviaUpdates() {
             })
             .filter(function(f) { return f; });
 
-        sockets[u.id].emit('serverTellPlayerMove', visibleCells, visibleFood, visibleMass);
+        sockets[u.id].emit('serverTellPlayerMove', celulasVisiveis, comidasVisiveis, massaVisivel);
     });
 }
 
@@ -544,9 +522,9 @@ setInterval(loopMovimento, 1000 / 60);
 setInterval(loopJogo, 1000);
 setInterval(enviaUpdates, 1000 / c.fatorAtualizacaoRede);
 
-// Don't touch, IP configurations.
+// Configurações de IP.
 var ipaddress = process.env.OPENSHIFT_NODEJS_IP || process.env.IP || c.host;
 var serverport = process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || c.port;
 http.listen( serverport, ipaddress, function() {
-    console.log('[DEBUG] Listening on ' + ipaddress + ':' + serverport);
+    console.log('[DEBUG] Ouvindo em ' + ipaddress + ':' + serverport);
 });
