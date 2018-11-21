@@ -26,15 +26,15 @@ var sockets = {};
 var V = SAT.Vector;
 var C = SAT.Circle;
 
-var initMassLog = util.dividirLog(c.massaPadraoJogador, c.slowBase);
+var initMassLog = util.dividirLog(c.massaPadraoJogador, c.desaceleracaoBase);
 
 app.use(express.static(__dirname + '/../client'));
 
 // Cria e adiciona na lista de comida a quantidade informada como parametro
 function addComida(qtdAdicionar) {
-    var raio = util.calculaRaio(c.foodMass);
+    var raio = util.calculaRaio(c.massaComida);
     while (qtdAdicionar--) {
-        var ponto = c.foodUniformDisposition ? util.uniformPosition(food, raio) : util.gerarPontoAleatoria(raio);
+        var ponto = c.disposicaoUniformeComida ? util.uniformPosition(food, raio) : util.gerarPontoAleatoria(raio);
         food.push({
             // Gera um ID unico
             id: ((new Date()).getTime() + '' + food.length) >>> 0,
@@ -66,7 +66,7 @@ function moveJogador(player) {
         var deg = Math.atan2(target.y, target.x);
         var slowDown = 1;
         if(player.cells[i].speed <= 6.25) {
-            slowDown = util.dividirLog(player.cells[i].mass, c.slowBase) - initMassLog + 1;
+            slowDown = util.dividirLog(player.cells[i].mass, c.desaceleracaoBase) - initMassLog + 1;
         }
 
         var deltaY = player.cells[i].speed * Math.sin(deg)/ slowDown;
@@ -168,14 +168,14 @@ function moveMassa(mass) {
 // Adiciona ou remove o numero de massa do jogo,
 // adicionando ou removendo a comida do jogo
 function balanceiaMassa() {
-    var totalMassaUtilizada = food.length * c.foodMass +
+    var totalMassaUtilizada = food.length * c.massaComida +
         usuarios
             .map(function(u) {return u.massTotal; })
             .reduce(function(massaAcumulada, massaAtual) { return massaAcumulada+massaAtual;}, 0);
 
-    var massaSobrando = c.gameMass - totalMassaUtilizada;
+    var massaSobrando = c.massaJogo - totalMassaUtilizada;
     var maxComidaSobrando = c.qtdMaxComida - food.length;
-    var comidaSobrando = parseInt(massaSobrando / c.foodMass) - maxComidaSobrando;
+    var comidaSobrando = parseInt(massaSobrando / c.massaComida) - maxComidaSobrando;
     var qtdAdicionar = Math.min(comidaSobrando, maxComidaSobrando);
     var qtdRemover = -Math.max(comidaSobrando, maxComidaSobrando);
 
@@ -193,7 +193,7 @@ io.on('connection', function (socket) {
 
     var type = socket.handshake.query.type;
     var radius = util.calculaRaio(c.massaPadraoJogador);
-    var position = c.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(usuarios, radius) : util.gerarPontoAleatoria(radius);
+    var position = c.posInicialNovoJogador == 'farthest' ? util.uniformPosition(usuarios, radius) : util.gerarPontoAleatoria(radius);
 
     var cells = [];
     var massTotal = 0;
@@ -235,7 +235,7 @@ io.on('connection', function (socket) {
             sockets[player.id] = socket;
 
             var radius = util.calculaRaio(c.massaPadraoJogador);
-            var position = c.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(usuarios, radius) : util.gerarPontoAleatoria(radius);
+            var position = c.posInicialNovoJogador == 'farthest' ? util.uniformPosition(usuarios, radius) : util.gerarPontoAleatoria(radius);
 
             player.x = position.x;
             player.y = position.y;
@@ -321,8 +321,8 @@ io.on('connection', function (socket) {
 });
 
 function tickJogador(currentPlayer) {
-    if(currentPlayer.lastHeartbeat < new Date().getTime() - c.maxHeartbeatInterval) {
-        sockets[currentPlayer.id].emit('kick', 'Last heartbeat received over ' + c.maxHeartbeatInterval + ' ago.');
+    if(currentPlayer.lastHeartbeat < new Date().getTime() - c.intervaloMaxHeartbeat) {
+        sockets[currentPlayer.id].emit('kick', 'Last heartbeat received over ' + c.intervaloMaxHeartbeat + ' ago.');
         sockets[currentPlayer.id].disconnect();
     }
 
@@ -422,7 +422,7 @@ function tickJogador(currentPlayer) {
 
         if(typeof(currentCell.speed) == "undefined")
             currentCell.speed = 6.25;
-        masaGanada += (foodEaten.length * c.foodMass);
+        masaGanada += (foodEaten.length * c.massaComida);
         currentCell.mass += masaGanada;
         currentPlayer.massTotal += masaGanada;
         currentCell.radius = util.calculaRaio(currentCell.mass);
@@ -464,8 +464,8 @@ function loopJogo() {
         
         for (i = 0; i < usuarios.length; i++) {
             for(var z=0; z < usuarios[i].cells.length; z++) {
-                if (usuarios[i].cells[z].mass * (1 - (c.massLossRate / 1000)) > c.massaPadraoJogador && usuarios[i].massTotal > c.minMassLoss) {
-                    var massLoss = usuarios[i].cells[z].mass * (1 - (c.massLossRate / 1000));
+                if (usuarios[i].cells[z].mass * (1 - (c.taxaPerdaMassa / 1000)) > c.massaPadraoJogador && usuarios[i].massTotal > c.qtdMinPerdaMassa) {
+                    var massLoss = usuarios[i].cells[z].mass * (1 - (c.taxaPerdaMassa / 1000));
                     usuarios[i].massTotal -= usuarios[i].cells[z].mass - massLoss;
                     usuarios[i].cells[z].mass = massLoss;
                 }
@@ -542,7 +542,7 @@ function enviaUpdates() {
 
 setInterval(loopMovimento, 1000 / 60);
 setInterval(loopJogo, 1000);
-setInterval(enviaUpdates, 1000 / c.networkUpdateFactor);
+setInterval(enviaUpdates, 1000 / c.fatorAtualizacaoRede);
 
 // Don't touch, IP configurations.
 var ipaddress = process.env.OPENSHIFT_NODEJS_IP || process.env.IP || c.host;
