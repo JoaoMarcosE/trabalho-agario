@@ -12,7 +12,7 @@
     "fatorAtualizacaoRede": 40,
     "intervaloMaxHeartbeat": 5000,
     "disposicaoUniformeComida": true,
-    "posInicialNovoJogador": "farthest",
+    "posInicialNovoJogador": "distante",
     "taxaPerdaMassa": 1,
     "qtdMinPerdaMassa": 50,
     "mergeTimer": 15
