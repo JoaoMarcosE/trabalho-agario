@@ -67,7 +67,6 @@ div {
 
 #nomeJogadorInput:focus, #nomeJogadorInput.focus {
     border: solid 1px #CCCCCC;
-    box-shadow: 0 0 3px 1px #DDDDDD;
 }
 
 #startButton {
