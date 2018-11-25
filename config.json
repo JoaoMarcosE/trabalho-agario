@@ -2,7 +2,7 @@
     "host": "0.0.0.0",
     "port": 3000,
     "logpath": "logger.php",
-    "massaComida": 1,
+    "massaComida": 5,
     "massaPadraoJogador": 10,
     "larguraJogo": 5000,
     "alturaJogo": 5000,
@@ -15,5 +15,6 @@
     "posInicialNovoJogador": "distante",
     "taxaPerdaMassa": 1,
     "qtdMinPerdaMassa": 50,
-    "mergeTimer": 15
+    "mergeTimer": 15,
+    "qtdCor": 7
 }
