@@ -7,8 +7,8 @@ module.exports = {
     ladosComida: 10,  
 
     // Canvas
-    larguraTela: window.innerWidth,
-    alturaTela: window.innerHeight,
+    larguraTela: window.innerWidth - 10,
+    alturaTela: window.innerHeight - 10,
     larguraJogo: 0,
     alturaJogo: 0,
     xoffset: -0,
@@ -18,6 +18,6 @@ module.exports = {
     morreu: false,
     kickado: false,
     alternarEstadoMassa: 0,
-    backgroundColor: '#f2fbff',
-    lineColor: '#000000',
+    backgroundColor: '#000000',
+    lineColor: '#ffffff',
 };
