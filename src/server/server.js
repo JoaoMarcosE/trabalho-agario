@@ -22,7 +22,7 @@ var usuarios = [];
 var massaComidas = [];
 var comidas = [];
 var sockets = {};
-
+var cores = [];
 var V = SAT.Vector;
 var C = SAT.Circle;
 
@@ -42,7 +42,7 @@ function addComida(qtdAdicionar) {
             y: ponto.y,
             raio: raio,
             massa: Math.random() + 2,
-            hue: Math.round(Math.random() * 360)
+            hue: cores[Math.round(Math.random() * c.qtdCor)]
         });
     }
 }
@@ -215,7 +215,7 @@ io.on('connection', function (socket) {
         h: c.massaPadraoJogador,
         celulas: celulas,
         massaTotal: massaTotal,
-        hue: Math.round(Math.random() * 360),
+        hue: cores[Math.round(Math.random() * c.qtdCor)],
         tipo: tipo,
         lastHeartbeat: new Date().getTime(),
         target: {
@@ -254,7 +254,7 @@ io.on('connection', function (socket) {
                  jogador.celulas = [];
                  jogador.massaTotal = 0;
             }
-            jogador.hue = Math.round(Math.random() * 360);
+            jogador.hue = cores[Math.round(Math.random() * c.qtdCor)];
             jogadorAtual = jogador;
             jogadorAtual.lastHeartbeat = new Date().getTime();
             usuarios.push(jogadorAtual);
@@ -300,15 +300,15 @@ io.on('connection', function (socket) {
 });
 
 function tickJogador(jogadorAtual) {
-    if(jogadorAtual.lastHeartbeat < new Date().getTime() - c.intervaloMaxHeartbeat) {
-        sockets[jogadorAtual.id].emit('kick', 'Ultimo heartbeat recebido há ' + c.intervaloMaxHeartbeat + ' segundos.');
+    if(jogadorAtual.lastHeartbeat < (new Date().getTime() - c.intervaloMaxHeartbeat)) {
+        sockets[jogadorAtual.id].emit('kick', 'Ultimo heartbeat recebido há ' + c.intervaloMaxHeartbeat + ' milisegundos.');
         sockets[jogadorAtual.id].disconnect();
     }
 
     moveJogador(jogadorAtual);
 
     function funcComida(f) {
-        return SAT.pointInCircle(new V(f.x, f.y), playerCircle);
+        return (SAT.pointInCircle(new V(f.x, f.y), playerCircle) && f.hue == jogadorAtual.hue);
     }
 
     function deletaComida(f) {
@@ -527,4 +527,10 @@ var ipaddress = process.env.OPENSHIFT_NODEJS_IP || process.env.IP || c.host;
 var serverport = process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || c.port;
 http.listen( serverport, ipaddress, function() {
     console.log('[DEBUG] Ouvindo em ' + ipaddress + ':' + serverport);
+
+    let proxCor = 360 / c.qtdCor;
+    for (let i = 1; i < 360; i+=proxCor) {
+        console.log(Math.round(i));
+        cores.push(Math.round(i));
+    }
 });
