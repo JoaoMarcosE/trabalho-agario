@@ -224,7 +224,7 @@ io.on('connection', function (socket) {
         }
     };
 
-    socket.on('gotit', function (jogador) {
+    socket.on('entendi', function (jogador) {
         console.log('[INFO] Jogador ' + jogador.nome + ' conectando!');
 
         if (util.buscaPorId(usuarios, jogador.id) > -1) {
@@ -259,9 +259,9 @@ io.on('connection', function (socket) {
             jogadorAtual.lastHeartbeat = new Date().getTime();
             usuarios.push(jogadorAtual);
 
-            io.emit('playerJoin', { nome: jogadorAtual.nome });
+            io.emit('jogadorEntrou', { nome: jogadorAtual.nome });
 
-            socket.emit('gameSetup', {
+            socket.emit('configuracaoJogo', {
                 larguraJogo: c.larguraJogo,
                 alturaJogo: c.alturaJogo
             });
@@ -270,7 +270,7 @@ io.on('connection', function (socket) {
 
     });
 
-    socket.on('windowResized', function (data) {
+    socket.on('redimensionaJanela', function (data) {
         jogadorAtual.larguraTela = data.larguraTela;
         jogadorAtual.alturaTela = data.alturaTela;
     });
@@ -278,16 +278,16 @@ io.on('connection', function (socket) {
     socket.on('respawn', function () {
         if (util.buscaPorId(usuarios, jogadorAtual.id) > -1)
             usuarios.splice(util.buscaPorId(usuarios, jogadorAtual.id), 1);
-        socket.emit('welcome', jogadorAtual);
+        socket.emit('bem-vindo', jogadorAtual);
         console.log('[INFO] Usuário ' + jogadorAtual.nome + ' respawnou!');
     });
 
-    socket.on('disconnect', function () {
+    socket.on('desconecta', function () {
         if (util.buscaPorId(usuarios, jogadorAtual.id) > -1)
             usuarios.splice(util.buscaPorId(usuarios, jogadorAtual.id), 1);
         console.log('[INFO] Usuário ' + jogadorAtual.nome + ' desconectou!');
 
-        socket.broadcast.emit('playerDisconnect', { nome: jogadorAtual.nome });
+        socket.broadcast.emit('jogadorDesconectou', { nome: jogadorAtual.nome });
     });
 
    // Função "Heartbeat" faz update a todo tempo
@@ -363,7 +363,7 @@ function tickJogador(jogadorAtual) {
                     usuarios[numUser].celulas.splice(collision.bUser.num, 1);
                 } else {
                     usuarios.splice(numUser, 1);
-                    io.emit('playerDied', { nome: collision.bUser.nome });
+                    io.emit('jogadorMorreu', { nome: collision.bUser.nome });
                     sockets[collision.bUser.id].emit('RIP');
                 }
             }
@@ -514,7 +514,7 @@ function enviaUpdates() {
             })
             .filter(function(f) { return f; });
 
-        sockets[u.id].emit('serverTellPlayerMove', celulasVisiveis, comidasVisiveis, massaVisivel);
+        sockets[u.id].emit('moveJogador', celulasVisiveis, comidasVisiveis, massaVisivel);
     });
 }
 
