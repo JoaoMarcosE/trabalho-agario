@@ -90,32 +90,32 @@ function setupSocket(socket) {
         global.desconectado = true;
     });
 
-    socket.on('disconnect', function () {
+    socket.on('desconecta', function () {
         socket.close();
         global.desconectado = true;
     });
 
     // Tratamento de conexão
-    socket.on('welcome', function (infoJogador) {
+    socket.on('bem-vindo', function (infoJogador) {
         jogador = infoJogador;
         jogador.nome = global.nomeJogador;
         jogador.larguraTela = global.larguraTela;
         jogador.alturaTela = global.alturaTela;
         jogador.alvo = window.canvas.alvo;
         global.jogador = jogador;
-        socket.emit('gotit', jogador);
+        socket.emit('entendi', jogador);
         global.jogoIniciado = true;
 		c.focus();
     });
 
-    socket.on('gameSetup', function(data) {
+    socket.on('configuracaoJogo', function(data) {
         global.larguraJogo = data.larguraJogo;
         global.alturaJogo = data.alturaJogo;
         resize();
     });
 
     // Tratamento da movimentação
-    socket.on('serverTellPlayerMove', function (usuarioData, listaComidas, massList) {
+    socket.on('moveJogador', function (usuarioData, listaComidas, massList) {
         var dadosJogador;
         for(var i =0; i< usuarioData.length; i++) {
             if(typeof(usuarioData[i].id) == "undefined") {
@@ -452,5 +452,5 @@ function resize() {
     jogador.larguraTela = c.width = global.larguraTela = global.tipoJogador == 'jogador' ? window.innerWidth : global.larguraJogo;
     jogador.alturaTela = c.height = global.alturaTela = global.tipoJogador == 'jogador' ? window.innerHeight : global.alturaJogo;
 
-    socket.emit('windowResized', { larguraTela: global.larguraTela, alturaTela: global.alturaTela });
+    socket.emit('redimensionaJanela', { larguraTela: global.larguraTela, alturaTela: global.alturaTela });
 }
